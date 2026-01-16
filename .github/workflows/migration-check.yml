@@ -25,12 +25,15 @@ jobs:
           FILES=$(git diff --name-only \
             ${{ github.event.pull_request.base.sha }} \
             ${{ github.event.pull_request.head.sha }} \
-            -- '**/migrations/**')
+            -- '**/migrations/**' -- ':(exclude)**/__pycache__/**')
 
-            echo "FILES<<EOF" >> $GITHUB_ENV
-            echo "$FILES" >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
+          {
+            echo "FILES<<EOF"
+            echo "$FILES"
+            echo "EOF"
+          } >> "$GITHUB_ENV"
 
       - name: Run database change parser
         run: |
-          echo $GITHUB_ENV
+          env | grep FILES
+          python canary/migration_check.py $FILES
