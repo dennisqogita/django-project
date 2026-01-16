@@ -1,6 +1,12 @@
 name: "Database change notifier"
 
-on: pull_request
+on:
+  pull_request:
+    branches: [main]
+    types:
+      - ready_for_review
+    paths:
+      - "**/migrations/**"
 
 jobs:
   migration-check:
