@@ -21,12 +21,13 @@ jobs:
       - name: Get changed migration files
         id: changed_files
         run: |
+          cd canary
           FILES=$(git diff --name-only \
             ${{ github.event.pull_request.base.sha }} \
             ${{ github.event.pull_request.head.sha }} \
             -- '**/migrations/**')
 
-            echo "FILES<EOF" >> $GITHUB_ENV
+            echo "FILES<<EOF" >> $GITHUB_ENV
             echo "$FILES" >> $GITHUB_ENV
             echo "EOF" >> $GITHUB_ENV
 
