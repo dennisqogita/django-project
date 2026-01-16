@@ -1,0 +1,31 @@
+name: "Database change notifier"
+
+on: pull_request
+
+jobs:
+  migration-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v6.0.1 release
+        with:
+          fetch-depth: 0
+          repository: dennisqogita/django-project
+          path: canary
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get changed migration files
+        id: changed_files
+        run: |
+          FILES=$(git diff --name-only \
+            ${{ github.event.pull_request.base.sha }} \
+            ${{ github.event.pull_request.head.sha }} \
+            -- '**/migrations/**')
+
+            echo "FILES<EOF" >> $GITHUB_ENV
+            echo "$FILES" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+
+      - name: Run database change parser
+        run: |
+          echo $GITHUB_ENV
