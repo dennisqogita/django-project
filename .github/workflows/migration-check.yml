@@ -71,8 +71,8 @@ jobs:
               if (changes.renamed_from) body += ` <- renamed from \`${changes.renamed_from}\``
 
               body += "\n";
-              body += `- Added: ${!isArrayEmpty(changes.added)} ? "None" : changes.added.join(", ")}\n`;
-              body += `- Removed: ${!isArrayEmpty(changes.removed)} ? "None" : changed.removed.join(", ")}\n`;
+              body += `- Added: ${!isArrayEmpty(changes.added) ? "None" : changes.added.join(", ")}\n`;
+              body += `- Removed: ${!isArrayEmpty(changes.removed) ? "None" : changed.removed.join(", ")}\n`;
               body += "\n";
             }
 
