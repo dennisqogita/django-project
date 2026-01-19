@@ -157,10 +157,14 @@ def parse_migration_file(file_path: str):
                     model.current_fields.discard(field_name)
 
                 elif operation_name == "RenameField":
+                    model_name = extract_str_from_node(kwargs.get("model_name"))
                     old_name = extract_str_from_node(kwargs.get("old_name"))
                     new_name = extract_str_from_node(kwargs.get("new_name"))
 
-                    if old_name and new_name:
+                    if model_name and old_name and new_name:
+                        model_name = f"{app_name}.{model_name.lower()}"
+                        model = get_model(model_name)
+
                         old_name = old_name.lower()
                         new_name = new_name.lower()
 
@@ -174,6 +178,8 @@ def parse_migration_file(file_path: str):
                         elif old_name in model.removed:
                             model.removed.discard(old_name)
                             model.added.add(new_name)
+                        else:
+                            model.renamed[old_name] = new_name
 
 if __name__ == "__main__":
     migration_files = sys.argv[1:]

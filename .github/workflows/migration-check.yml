@@ -80,6 +80,8 @@ jobs:
               body += "\n";
             }
 
+            console.log(body)
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
