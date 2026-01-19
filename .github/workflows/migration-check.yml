@@ -45,6 +45,44 @@ jobs:
       # - name: Echo migration changes
       #   run: echo $MIGRATION_CHANGES | jq .
 
+      - name: Build migration message body
+        run: |
+          node <<'EOF'
+          const migrationChanges = JSON.parse(process.env.MIGRATION_CHANGES);
+
+          const isArrayEmpty = (arr) => !Array.isArray(arr) || arr.length == 0;
+
+          const statusText = (status) => {
+            switch (status) {
+              case -1: return "deleted";
+              case 0: return "modified";
+              case 1: return "created";
+              default: "return unknown"
+            }
+          };
+
+          let body = "";
+
+          for (const [model, changes] of Object.entries(migrationChanges)) {
+            body += `**${model}** (${statusText(changes.status)})`;
+            if (changes.renamed_from) body += ` &larr; renamed from **${changes.renamed_from}**`
+            body += "\n";
+
+            if (!isArrayEmpty(changes.added)) body += `&ndash; Added: ${changes.added.join(", ")}\n`;
+            if (!isArrayEmpty(changes.removed)) body += `&ndash; Removed: ${changes.removed.join(", ")}\n`;
+
+            const renamedEntries = Object.entries(changes.renamed || {});
+            if (renamedEntries.length > 0) {
+              body += `&ndash; Renamed: ${renamedEntries.map(([oldName, newName]) => oldName + " &rarr; " + newName).join(", ")}\n`
+            }
+
+            body += "\n";
+          }
+
+          const fs = require("fs");
+          fs.appendFileSync(process.env.GITHUB_ENV, `MIGRATION_BODY<<EOF\n${body}\nEOF\n`);
+          EOF
+
       - name: Add GitHub comment with changes
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd #v8 release
         with:
@@ -62,24 +100,8 @@ jobs:
               }
             };
 
-            let body = "## :warning: Migration Changes Detected\n\n";
-            body += "The following models were affected in this PR.\n\n"
-
-            for (const [model, changes] of Object.entries(migrationChanges)) {
-              body += `**${model}** (${statusText(changes.status)})`;
-              if (changes.renamed_from) body += ` &larr; renamed from \`${changes.renamed_from}\``
-              body += "\n";
-
-              if (!isArrayEmpty(changes.added)) body += `&ndash; Added: ${changes.added.join(", ")}\n`;
-              if (!isArrayEmpty(changes.removed)) body += `&ndash; Removed: ${changes.removed.join(", ")}\n`;
-
-              const renamedEntries = Object.entries(changes.renamed || {});
-              if (renamedEntries.length > 0) {
-                body += `&ndash; Renamed: ${renamedEntries.map(([oldName, newName]) => oldName + " &rarr; " + newName).join(", ")}\n`
-              }
-
-              body += "\n";
-            }
+            const header = "## :warning: Migration Changes Detected\n\nThe following models were affected in this PR.\n\n";
+            const body = header + process.env.MIGRATION_BODY;
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
