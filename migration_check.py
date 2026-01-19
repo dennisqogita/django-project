@@ -4,6 +4,7 @@ from ast import expr
 from typing import Dict, Set
 import sys
 import ast
+import os
 
 from pathlib import Path
 from dataclasses import dataclass, field
@@ -25,15 +26,15 @@ class ModelChanges:
     renamed_from: str | None = field(default=None)
     added: Set[str] = field(default_factory=set)
     removed: Set[str] = field(default_factory=set)
+    current_fields: Set[str] = field(default_factory=set)
 
-    def to_json(self) -> str:
-        data = {
+    def to_json(self) -> dict:
+        return {
             "status": self.status.value,
             "renamed_from": self.renamed_from,
-            "added": list(self.added),
-            "removed": list(self.removed)
+            "added": sorted(list(self.added)),
+            "removed": sorted(list(self.removed))
         }
-        return json.dumps(data, indent=2)
 
 migration_changes: Dict[str, ModelChanges] = {}
 
@@ -83,9 +84,13 @@ def parse_migration_file(file_path: str):
 
                 if operation_name in MODEL_OPS:
                     model_name = extract_str_from_node(kwargs.get("name"))
+                    if not model_name:
+                        continue
+
+                    model_name = model_name.lower()
 
                     if operation_name == "CreateModel" and model_name:
-                        model = get_model(model_name.lower())
+                        model = get_model(model_name)
                         model.status = Status.CREATED
 
                         fields_node = kwargs.get("fields")
@@ -95,11 +100,17 @@ def parse_migration_file(file_path: str):
                                     field_name_node = field_tuple.elts[0]
                                     field_name = extract_str_from_node(field_name_node)
                                     if field_name:
-                                        model.added.add(field_name)
+                                        f_name = field_name.lower()
+                                        model.added.add(f_name)
+                                        model.removed.discard(f_name)
+                                        model.current_fields.add(f_name)
 
                     elif operation_name == "DeleteModel" and model_name:
-                        model = get_model(model_name.lower())
+                        model = get_model(model_name)
                         model.status = Status.DELETED
+                        model.added.clear()
+                        model.removed.clear()
+                        model.current_fields.clear()
 
                     elif operation_name == "RenameModel":
                         old_name = extract_str_from_node(kwargs.get("old_name"))
@@ -110,8 +121,9 @@ def parse_migration_file(file_path: str):
                             new_name = new_name.lower()
 
                             model = get_model(old_name)
-                            if model.renamed_from is None:
+                            if model.renamed_from is None and model.status != Status.CREATED:
                                 model.renamed_from = old_name
+
                             migration_changes[new_name] = model
                             migration_changes.pop(old_name, None)
 
@@ -123,28 +135,49 @@ def parse_migration_file(file_path: str):
                 if not field_name or not model_name:
                     continue
 
+                field_name = field_name.lower()
+                model_name = model_name.lower()
                 model = get_model(model_name)
 
                 if operation_name in ADDED_OPS:
+                    model.removed.discard(field_name)
                     model.added.add(field_name)
+                    model.current_fields.add(field_name)
 
                 elif operation_name in REMOVED_OPS:
-                    model.removed.add(field_name)
+                    if field_name in model.added:
+                        model.added.discard(field_name)
+                    else:
+                        model.removed.add(field_name)
+
+                    model.current_fields.discard(field_name)
 
                 elif operation_name == "RenameField":
                     old_name = extract_str_from_node(kwargs.get("old_name"))
                     new_name = extract_str_from_node(kwargs.get("new_name"))
 
                     if old_name and new_name:
-                        model.removed.add(old_name)
-                        model.added.add(new_name)
+                        old_name = old_name.lower()
+                        new_name = new_name.lower()
+
+                        model.current_fields.discard(old_name)
+                        model.current_fields.add(new_name)
+
+                        if old_name in model.added:
+                            model.added.discard(old_name)
+                            model.added.add(new_name)
+                        elif old_name in model.removed:
+                            model.removed.discard(old_name)
+                            model.added.add(new_name)
+                        else:
+                            model.removed.add(old_name)
+                            model.added.add(new_name)
 
 if __name__ == "__main__":
     migration_files = sys.argv[1:]
     for file_path in migration_files:
         parse_migration_file(file_path)
 
-    # print(migration_changes.to_json())
-    for obj in migration_changes:
-        # print(migration_changes[obj].to_json())
-        print(f"{obj}: {migration_changes[obj].to_json()}")
+    all_migrations_json = json.dumps({k: v.to_json() for k, v in migration_changes.items()})
+    with open(os.environ.get("GITHUB_ENV", "/tmp/env"), "a") as f:
+        f.write(f'MIGRATION_CHANGES={all_migrations_json}\n')

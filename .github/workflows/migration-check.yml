@@ -37,3 +37,6 @@ jobs:
         run: |
           cd canary
           python migration_check.py $FILES
+
+      - name: Echo migration changes
+        run: echo $MIGRATION_CHANGES | jq .
