@@ -7,4 +7,4 @@ class Member(models.Model):
 
 class Subject(models.Model):
     title = models.CharField(max_length=255)
-    subtitle = models.TextField(default="Subtitle")
+    secondary_title = models.TextField(default="Subtitle")
