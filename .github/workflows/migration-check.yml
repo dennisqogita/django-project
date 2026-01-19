@@ -63,28 +63,33 @@ jobs:
             };
 
             let body = "## :warning: Migration Changes Detected\n\n";
+            body += "The following models and fields have been modified in this PR.\n\n"
 
             for (const [model, changes] of Object.entries(migrationChanges)) {
-              body += `**${model}** (${statusText(changes.status)})`;
+              body += `## Model: **${model}** (${statusText(changes.status)})`;
 
               if (changes.renamed_from) {
                 body += ` <- renamed from \`${changes.renamed_from}\``
               }
-
               body += "\n";
 
               if (!isArrayEmpty(changes.added)) {
-                body += `- Added: ${changes.added.join(", ")}\n`;
+                body += "### Added fields:\n"
+                for (field in changes.added) {
+                  body += `- ${field}\n`;
+                }
               }
 
               if (!isArrayEmpty(changes.removed)) {
-                body += `- Removed: ${changes.removed.join(", ")}\n`;
+                body += "### Removed fields:\n"
+                for (field in changes.removed) {
+                  body += `- ${field}\n`;
+                }
               }
 
               body += "\n";
             }
 
-            // console.log(msg);
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
