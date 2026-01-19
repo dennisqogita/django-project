@@ -86,6 +86,24 @@ def parse_migration_file(file_path: str):
                 }
 
                 if operation_name in MODEL_OPS:
+                    if operation_name == "RenameModel":
+                        old_name = extract_str_from_node(kwargs.get("old_name"))
+                        new_name = extract_str_from_node(kwargs.get("new_name"))
+
+                        if old_name and new_name:
+                            old_name = old_name.lower()
+                            new_name = new_name.lower()
+
+                            model_name = f"{app_name}.{old_name}"
+                            new_model_name = f"{app_name}.{new_name}"
+
+                            model = get_model(model_name)
+                            if model.renamed_from is None and model.status != Status.CREATED:
+                                model.renamed_from = old_name
+
+                            migration_changes[new_model_name] = model
+                            migration_changes.pop(model_name, None)
+
                     model_name = extract_str_from_node(kwargs.get("name"))
                     if not model_name:
                         continue
@@ -115,20 +133,7 @@ def parse_migration_file(file_path: str):
                         model.removed.clear()
                         model.current_fields.clear()
 
-                    elif operation_name == "RenameModel":
-                        old_name = extract_str_from_node(kwargs.get("old_name"))
-                        new_name = extract_str_from_node(kwargs.get("new_name"))
 
-                        if old_name and new_name:
-                            old_name = old_name.lower()
-                            new_name = new_name.lower()
-
-                            model = get_model(old_name)
-                            if model.renamed_from is None and model.status != Status.CREATED:
-                                model.renamed_from = old_name
-
-                            migration_changes[new_name] = model
-                            migration_changes.pop(old_name, None)
 
                     continue
 
