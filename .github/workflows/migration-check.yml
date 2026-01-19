@@ -63,30 +63,16 @@ jobs:
             };
 
             let body = "## :warning: Migration Changes Detected\n\n";
-            body += "The following models and fields have been modified in this PR.\n\n"
+            body += "The following models were affected in this PR.\n\n"
 
             for (const [model, changes] of Object.entries(migrationChanges)) {
-              body += `## Model: **${model}** (${statusText(changes.status)})`;
+              body += `**${model}** (${statusText(changes.status)})`;
 
-              if (changes.renamed_from) {
-                body += ` <- renamed from \`${changes.renamed_from}\``
-              }
+              if (changes.renamed_from) body += ` <- renamed from \`${changes.renamed_from}\``
+
               body += "\n";
-
-              if (!isArrayEmpty(changes.added)) {
-                body += "### Added fields:\n"
-                for (field in changes.added) {
-                  body += `- ${field}\n`;
-                }
-              }
-
-              if (!isArrayEmpty(changes.removed)) {
-                body += "### Removed fields:\n"
-                for (field in changes.removed) {
-                  body += `- ${field}\n`;
-                }
-              }
-
+              body += `- Added: ${!isArrayEmpty(changes.added)} ? "None" : changes.added.join(", ")}\n`;
+              body += `- Removed: ${!isArrayEmpty(changes.removed)} ? "None" : changed.removed.join(", ")}\n`;
               body += "\n";
             }
 
