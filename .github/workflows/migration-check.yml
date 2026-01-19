@@ -67,15 +67,15 @@ jobs:
 
             for (const [model, changes] of Object.entries(migrationChanges)) {
               body += `**${model}** (${statusText(changes.status)})`;
-              if (changes.renamed_from) body += ` <- renamed from \`${changes.renamed_from}\``
+              if (changes.renamed_from) body += ` &larr; renamed from \`${changes.renamed_from}\``
               body += "\n";
 
-              if (!isArrayEmpty(changes.added)) body += `- Added: ${changes.added.join(", ")}\n`;
-              if (!isArrayEmpty(changes.removed)) body += `- Removed: ${changes.removed.join(", ")}\n`;
+              if (!isArrayEmpty(changes.added)) body += `&ndash; Added: ${changes.added.join(", ")}\n`;
+              if (!isArrayEmpty(changes.removed)) body += `&ndash; Removed: ${changes.removed.join(", ")}\n`;
 
               const renamedEntries = Object.entries(changes.renamed || {});
               if (renamedEntries.length > 0) {
-                body += `- Renamed: ${renamedEntries.map(([oldName, newName]) => oldName + " -> " + newName).join(", ")}\n`
+                body += `&ndash; Renamed: ${renamedEntries.map(([oldName, newName]) => oldName + " &rarr; " + newName).join(", ")}\n`
               }
 
               body += "\n";
