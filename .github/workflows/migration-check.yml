@@ -72,7 +72,7 @@ jobs:
 
               body += "\n";
               body += `- Added: ${!isArrayEmpty(changes.added) ? "None" : changes.added.join(", ")}\n`;
-              body += `- Removed: ${!isArrayEmpty(changes.removed) ? "None" : changed.removed.join(", ")}\n`;
+              body += `- Removed: ${!isArrayEmpty(changes.removed) ? "None" : changes.removed.join(", ")}\n`;
               body += "\n";
             }
 
