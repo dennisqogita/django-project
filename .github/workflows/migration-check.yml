@@ -6,6 +6,10 @@ on:
     paths:
       - "**/migrations/**"
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   migration-check:
     runs-on: ubuntu-latest
