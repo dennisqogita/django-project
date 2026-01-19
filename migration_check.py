@@ -87,7 +87,8 @@ def parse_migration_file(file_path: str):
                     if not model_name:
                         continue
 
-                    model_name = model_name.lower()
+                    app_name = extract_app_label(file_path)
+                    model_name = f"{app_name}.{model_name.lower()}"
 
                     if operation_name == "CreateModel" and model_name:
                         model = get_model(model_name)
