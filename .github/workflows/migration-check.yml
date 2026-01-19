@@ -35,5 +35,5 @@ jobs:
 
       - name: Run database change parser
         run: |
-          env | grep FILES
-          python canary/migration_check.py $FILES
+          cd canary
+          python migration_check.py $FILES
