@@ -1,0 +1,15 @@
+{
+  "pull_request": {
+    "base": {
+      "sha": "e899ee31f06bbf8c6bc7afcb7ed7c5b56a295194",
+      "ref": "main"
+    },
+    "head": {
+      "sha": "05b38da321fdeaf5b00d49a95dd4ec778a67bf9c",
+      "ref": "members"
+    }
+  },
+  "repository": {
+    "full_name": "dennisqogita/django-project"
+  }
+}
