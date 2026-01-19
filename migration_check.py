@@ -77,6 +77,7 @@ def parse_migration_file(file_path: str):
                 if not isinstance(operation.func, ast.Attribute):
                     continue
 
+                app_name = extract_app_label(file_path)
                 operation_name = operation.func.attr
                 kwargs: Dict[str, ast.expr] = {
                     kw.arg: kw.value
@@ -89,7 +90,6 @@ def parse_migration_file(file_path: str):
                     if not model_name:
                         continue
 
-                    app_name = extract_app_label(file_path)
                     model_name = f"{app_name}.{model_name.lower()}"
 
                     if operation_name == "CreateModel" and model_name:
@@ -132,6 +132,31 @@ def parse_migration_file(file_path: str):
 
                     continue
 
+                if operation_name == "RenameField":
+                    model_name = extract_str_from_node(kwargs.get("model_name"))
+                    old_name = extract_str_from_node(kwargs.get("old_name"))
+                    new_name = extract_str_from_node(kwargs.get("new_name"))
+
+                    if model_name and old_name and new_name:
+                        model_name = f"{app_name}.{model_name.lower()}"
+                        model = get_model(model_name)
+
+                        old_name = old_name.lower()
+                        new_name = new_name.lower()
+
+                        model.current_fields.discard(old_name)
+                        model.current_fields.add(new_name)
+
+                        if old_name not in model.added:
+                            model.renamed[old_name] = new_name
+
+                        if old_name in model.added:
+                            model.added.discard(old_name)
+                            model.added.add(new_name)
+                        elif old_name in model.removed:
+                            model.removed.discard(old_name)
+                            model.added.add(new_name)
+
                 field_name = extract_str_from_node(kwargs.get("name"))
                 model_name = extract_str_from_node(kwargs.get("model_name"))
 
@@ -155,31 +180,6 @@ def parse_migration_file(file_path: str):
                         model.removed.add(field_name)
 
                     model.current_fields.discard(field_name)
-
-                elif operation_name == "RenameField":
-                    model_name = extract_str_from_node(kwargs.get("model_name"))
-                    old_name = extract_str_from_node(kwargs.get("old_name"))
-                    new_name = extract_str_from_node(kwargs.get("new_name"))
-
-                    if model_name and old_name and new_name:
-                        model_name = f"{app_name}.{model_name.lower()}"
-                        model = get_model(model_name)
-
-                        old_name = old_name.lower()
-                        new_name = new_name.lower()
-
-                        model.current_fields.discard(old_name)
-                        model.current_fields.add(new_name)
-                        model.renamed[old_name] = new_name
-
-                        if old_name in model.added:
-                            model.added.discard(old_name)
-                            model.added.add(new_name)
-                        elif old_name in model.removed:
-                            model.removed.discard(old_name)
-                            model.added.add(new_name)
-                        else:
-                            model.renamed[old_name] = new_name
 
 if __name__ == "__main__":
     migration_files = sys.argv[1:]

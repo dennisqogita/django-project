@@ -70,17 +70,16 @@ jobs:
               if (changes.renamed_from) body += ` <- renamed from \`${changes.renamed_from}\``
               body += "\n";
 
-              body += `- Added: ${isArrayEmpty(changes.added) ? "None" : changes.added.join(", ")}\n`;
-              body += `- Removed: ${isArrayEmpty(changes.removed) ? "None" : changes.removed.join(", ")}\n`;
+              if (!isArrayEmpty(changes.added)) body += `- Added: ${changes.added.join(", ")}\n`;
+              if (!isArrayEmpty(changes.removed)) body += `- Removed: ${changes.removed.join(", ")}\n`;
 
               const renamedEntries = Object.entries(changes.renamed || {});
-              body += `- Renamed: ${renamedEntries.length === 0
-                ? "None"
-                : renamedEntries.map(([oldName, newName]) => `${oldNmae} -> ${newName}`).join(", ")}\n`;
+              if (renamedEntries.length > 0) {
+                body += `- Renamed: ${renamedEntries.map(([oldName, newName]) => oldName + " -> " + newName).join(", ")}\n`
+              }
+
               body += "\n";
             }
-
-            console.log(body)
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
