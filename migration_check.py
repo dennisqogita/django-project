@@ -26,6 +26,7 @@ class ModelChanges:
     renamed_from: str | None = field(default=None)
     added: Set[str] = field(default_factory=set)
     removed: Set[str] = field(default_factory=set)
+    renamed: Dict[str, str] = field(default_factory=dict)
     current_fields: Set[str] = field(default_factory=set)
 
     def to_json(self) -> dict:
@@ -33,7 +34,8 @@ class ModelChanges:
             "status": self.status.value,
             "renamed_from": self.renamed_from,
             "added": sorted(list(self.added)),
-            "removed": sorted(list(self.removed))
+            "removed": sorted(list(self.removed)),
+            "renamed": self.renamed
         }
 
 migration_changes: Dict[str, ModelChanges] = {}
@@ -164,15 +166,13 @@ def parse_migration_file(file_path: str):
 
                         model.current_fields.discard(old_name)
                         model.current_fields.add(new_name)
+                        model.renamed[old_name] = new_name
 
                         if old_name in model.added:
                             model.added.discard(old_name)
                             model.added.add(new_name)
                         elif old_name in model.removed:
                             model.removed.discard(old_name)
-                            model.added.add(new_name)
-                        else:
-                            model.removed.add(old_name)
                             model.added.add(new_name)
 
 if __name__ == "__main__":
