@@ -99,7 +99,7 @@ def parse_migration_file(file_path: str):
 
                             model = get_model(model_name)
                             if model.renamed_from is None and model.status != Status.CREATED:
-                                model.renamed_from = old_name
+                                model.renamed_from = model_name
 
                             migration_changes[new_model_name] = model
                             migration_changes.pop(model_name, None)
