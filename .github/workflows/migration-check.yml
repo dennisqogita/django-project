@@ -42,48 +42,123 @@ jobs:
           cd canary
           python migration_check.py $FILES
 
+      - name: Get body of PR
+        run: |
+          echo "PR BODY:"
+          echo "${{ github.event.pull_request.body }}"
+
+      - name: Extract Database update context from PR body
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          echo "Extracting Database update context..."
+
+          DB_CONTEXT=$(printf '%s\n' "$PR_BODY" | \
+            sed -n '/## Database update context/,/^[[:space:]]*---/p' | \
+            sed '1d;$d')
+
+          # Optional: trim leading/trailing whitespace
+          DB_CONTEXT=$(printf '%s\n' "$DB_CONTEXT" | sed '/^[[:space:]]*$/d')
+
+          echo "DB_CONTEXT<<EOF" >> $GITHUB_ENV
+          echo "$DB_CONTEXT" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Print DB_CONTEXT
+        run: |
+          echo "$DB_CONTEXT"
+
+      # - name: Read PR descriptiona
+      #   uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd #v8 release
+      #   with:
+      #     script: |
+      #       const { owner, repo } = context.repo;
+      #       const issue_number = context.payload.pull_request.number;
+
+      #       const comments = await github.rest.issues.listComments({
+      #         owner,
+      #         repo,
+      #         issue_number,
+      #         per_page: 100,
+      #       });
+
+      #       if (comments.data.length === 0) {
+      #         core.setFailed('No comments found on PR');
+      #         return;
+      #       }
+
+      #       // Comments are returned oldest → newest
+      #       const firstComment = comments.data[0];
+
+      #       console.log('First comment author:', firstComment.user.login);
+      #       console.log('First comment body:\n', firstComment.body);
+
+      #       core.setOutput('first_comment_body', firstComment.body);
+
       # - name: Echo migration changes
       #   run: echo $MIGRATION_CHANGES | jq .
 
-      - name: Add GitHub comment with changes
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd #v8 release
-        with:
-          script: |
-            const migrationChanges = JSON.parse(process.env.MIGRATION_CHANGES)
+      # - name: Build migration message body
+      #   run: |
+      #     node <<'EOF'
+      #     const migrationChanges = JSON.parse(process.env.MIGRATION_CHANGES);
 
-            const isArrayEmpty = (arr) => !Array.isArray(arr) || arr.length === 0;
+      #     const isArrayEmpty = (arr) => !Array.isArray(arr) || arr.length == 0;
 
-            const statusText = (status) => {
-              switch (status) {
-                case -1: return "deleted";
-                case 0: return "modified";
-                case 1: return "created";
-                default: return "unknown";
-              }
-            };
+      #     const statusText = (status) => {
+      #       switch (status) {
+      #         case -1: return "deleted";
+      #         case 0: return "modified";
+      #         case 1: return "created";
+      #         default: "return unknown"
+      #       }
+      #     };
 
-            let body = "## :warning: Migration Changes Detected\n\n";
-            body += "The following models were affected in this PR.\n\n"
+      #     let body = "";
 
-            for (const [model, changes] of Object.entries(migrationChanges)) {
-              body += `**${model}** (${statusText(changes.status)})`;
-              if (changes.renamed_from) body += ` <- renamed from \`${changes.renamed_from}\``
-              body += "\n";
+      #     for (const [model, changes] of Object.entries(migrationChanges)) {
+      #       body += `**${model}** (${statusText(changes.status)})`;
+      #       if (changes.renamed_from) body += ` &larr; renamed from **${changes.renamed_from}**`
+      #       body += "\n";
 
-              if (!isArrayEmpty(changes.added)) body += `- Added: ${changes.added.join(", ")}\n`;
-              if (!isArrayEmpty(changes.removed)) body += `- Removed: ${changes.removed.join(", ")}\n`;
+      #       if (!isArrayEmpty(changes.added)) body += `&ndash; Added: ${changes.added.join(", ")}\n`;
+      #       if (!isArrayEmpty(changes.removed)) body += `&ndash; Removed: ${changes.removed.join(", ")}\n`;
 
-              const renamedEntries = Object.entries(changes.renamed || {});
-              if (renamedEntries.length > 0) {
-                body += `- Renamed: ${renamedEntries.map(([oldName, newName]) => oldName + " -> " + newName).join(", ")}\n`
-              }
+      #       const renamedEntries = Object.entries(changes.renamed || {});
+      #       if (renamedEntries.length > 0) {
+      #         body += `&ndash; Renamed: ${renamedEntries.map(([oldName, newName]) => oldName + " &rarr; " + newName).join(", ")}\n`
+      #       }
 
-              body += "\n";
-            }
+      #       body += "\n";
+      #     }
 
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: body
-            })
+      #     const fs = require("fs");
+      #     fs.appendFileSync(process.env.GITHUB_ENV, `MIGRATION_BODY<<EOF\n${body}\nEOF\n`);
+      #     EOF
+
+      # - name: Add GitHub comment with changes
+      #   uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd #v8 release
+      #   with:
+      #     script: |
+      #       const migrationChanges = JSON.parse(process.env.MIGRATION_CHANGES)
+
+      #       const isArrayEmpty = (arr) => !Array.isArray(arr) || arr.length === 0;
+
+      #       const statusText = (status) => {
+      #         switch (status) {
+      #           case -1: return "deleted";
+      #           case 0: return "modified";
+      #           case 1: return "created";
+      #           default: return "unknown";
+      #         }
+      #       };
+
+      #       const header = "## :warning: Migration Changes Detected\n\nThe following models were affected in this PR.\n\n";
+      #       const body = header + process.env.MIGRATION_BODY;
+
+      #       await github.rest.issues.createComment({
+      #         owner: context.repo.owner,
+      #         repo: context.repo.repo,
+      #         issue_number: context.issue.number,
+      #         body: body
+      #       })
