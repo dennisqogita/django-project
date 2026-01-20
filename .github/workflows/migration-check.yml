@@ -45,7 +45,28 @@ jobs:
       - name: Get body of PR
         run: |
           echo "PR BODY:"
-          echo ${{ github.event.pull_request.body }}
+          echo "${{ github.event.pull_request.body }}"
+
+      - name: Extract Database update context from PR body
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          echo "Extracting Database update context..."
+
+          DB_CONTEXT=$(printf '%s\n' "$PR_BODY" | \
+            sed -n '/## Database update context/,/^[[:space:]]*---/p' | \
+            sed '1d;$d')
+
+          # Optional: trim leading/trailing whitespace
+          DB_CONTEXT=$(printf '%s\n' "$DB_CONTEXT" | sed '/^[[:space:]]*$/d')
+
+          echo "DB_CONTEXT<<EOF" >> $GITHUB_ENV
+          echo "$DB_CONTEXT" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Print DB_CONTEXT
+        run: |
+          echo "$DB_CONTEXT"
 
       # - name: Read PR descriptiona
       #   uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd #v8 release
