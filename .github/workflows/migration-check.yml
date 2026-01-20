@@ -42,32 +42,37 @@ jobs:
           cd canary
           python migration_check.py $FILES
 
-      - name: Read PR description
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd #v8 release
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            const issue_number = context.payload.pull_request.number;
+      - name: Get body of PR
+        run: |
+          echo "PR BODY:"
+          echo ${{ github.event.pull_request.body }}
 
-            const comments = await github.rest.issues.listComments({
-              owner,
-              repo,
-              issue_number,
-              per_page: 100,
-            });
+      # - name: Read PR description
+      #   uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd #v8 release
+      #   with:
+      #     script: |
+      #       const { owner, repo } = context.repo;
+      #       const issue_number = context.payload.pull_request.number;
 
-            if (comments.data.length === 0) {
-              core.setFailed('No comments found on PR');
-              return;
-            }
+      #       const comments = await github.rest.issues.listComments({
+      #         owner,
+      #         repo,
+      #         issue_number,
+      #         per_page: 100,
+      #       });
 
-            // Comments are returned oldest → newest
-            const firstComment = comments.data[0];
+      #       if (comments.data.length === 0) {
+      #         core.setFailed('No comments found on PR');
+      #         return;
+      #       }
 
-            console.log('First comment author:', firstComment.user.login);
-            console.log('First comment body:\n', firstComment.body);
+      #       // Comments are returned oldest → newest
+      #       const firstComment = comments.data[0];
 
-            core.setOutput('first_comment_body', firstComment.body);
+      #       console.log('First comment author:', firstComment.user.login);
+      #       console.log('First comment body:\n', firstComment.body);
+
+      #       core.setOutput('first_comment_body', firstComment.body);
 
       # - name: Echo migration changes
       #   run: echo $MIGRATION_CHANGES | jq .
